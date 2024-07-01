@@ -1,19 +1,19 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from querys import QueryPanel, get_sites, get_page_stats
+from querys import QueryPanel, get_sites, get_page_stats, convertir_fecha
 
 data_cache = []
 
-
+# Función que se ejecuta al presionar el botón "Obtener estadísticas"
 def on_submit():
-    global data_cache  # Añadir esta línea
-    site_url = site_combobox.get()
+    global data_cache  # Permite modificar la variable global data_cache
+    site_url = site_combobox.get()  # Obtiene la URL del sitio seleccionada en el combobox
     if site_url:
-        result = get_page_stats(site_url)
+        result = get_page_stats(site_url)  # Obtiene las estadísticas de la página
         if isinstance(result, str):
-            messagebox.showerror("Error", result)
+            messagebox.showerror("Error", result)  # Muestra un error si el resultado es un string (mensaje de error)
         else:
-            data_cache = result  # Añadir esta línea
+            data_cache = result  # Guarda los resultados en la caché
             # Limpiar la tabla antes de insertar nuevos datos
             for row in tree.get_children():
                 tree.delete(row)
@@ -22,49 +22,59 @@ def on_submit():
             for item in result:
                 tree.insert("", "end", values=(
                     item['Query'], 
-                    item['Date'], 
+                    convertir_fecha(item['Date']),  
                     item['Impressions'], 
                     item['AvgImpressionPosition'], 
-                    item['Clicks'], 
-                    item['AvgClickPosition']
+                    item['Clicks']
                 ))
     else:
-        messagebox.showwarning("Advertencia", "Por favor, seleccione una URL del sitio.")
-    
+        messagebox.showwarning("Advertencia", "Por favor, seleccione una URL del sitio.")  # Muestra una advertencia si no se selecciona una URL
 
-
+# Función que se ejecuta al hacer doble clic en un elemento del treeview
 def on_treeview_double_click(event):
-    item = tree.selection()[0]
-    page_url = tree.item(item, "values")[0]
-    site_url = site_combobox.get()
+    item = tree.selection()[0]  # Obtiene el elemento seleccionado
+    page_url = tree.item(item, "values")[0]  # Obtiene la URL de la página del elemento seleccionado
+    site_url = site_combobox.get()  # Obtiene la URL del sitio seleccionada en el combobox
     if site_url and page_url:
-        query_panel = QueryPanel(root, site_url, page_url)
-        query_panel.show()
+        query_panel = QueryPanel(root, site_url, page_url)  # Crea un panel de consulta con la URL del sitio y la URL de la página
+        query_panel.show()  # Muestra el panel de consulta
     else:
-        messagebox.showwarning("Advertencia", "Por favor, seleccione la URL del sitio y la URL de la página.")
+        messagebox.showwarning("Advertencia", "Por favor, seleccione la URL del sitio y la URL de la página.")  # Muestra una advertencia si no se selecciona una URL del sitio o de la página
 
+# Función que se ejecuta al presionar el botón "Buscar"
 def search_query():
-    query = entry_search.get().lower()
+    query = entry_search.get().lower()  # Obtiene la consulta de búsqueda y la convierte a minúsculas
     for row in tree.get_children():
-        tree.delete(row)
+        tree.delete(row)  # Limpia la tabla
     for item in data_cache:
-        if query in item['Query'].lower():
+        if query in item['Query'].lower():  # Filtra los resultados que contienen la consulta de búsqueda
             tree.insert("", "end", values=(
                 item['Query'], 
-                item['Date'], 
+                convertir_fecha(item['Date']), 
                 item['Impressions'], 
                 item['AvgImpressionPosition'], 
-                item['Clicks'], 
-                item['AvgClickPosition']
+                item['Clicks']
             ))
+
+# Función para ordenar las columnas del treeview
 def sort_column(tree, col, reverse):
-    l = [(tree.set(k, col), k) for k in tree.get_children('')]
-    l.sort(reverse=reverse)
+    # Función para convertir los valores a un tipo adecuado para la comparación
+    def convert(val):
+        try:
+            return int(val)
+        except ValueError:
+            try:
+                return float(val)
+            except ValueError:
+                return val
+
+    l = [(convert(tree.set(k, col)), k) for k in tree.get_children('')]  # Convierte los valores antes de ordenar
+    l.sort(reverse=reverse)  # Ordena los valores
 
     for index, (val, k) in enumerate(l):
-        tree.move(k, '', index)
+        tree.move(k, '', index)  # Reordena los elementos en el treeview
 
-    tree.heading(col, command=lambda: sort_column(tree, col, not reverse))
+    tree.heading(col, command=lambda: sort_column(tree, col, not reverse))  # Cambia la dirección de ordenación al hacer clic en el encabezado de la columna
 
 # Crear la ventana principal
 root = tk.Tk()
@@ -92,7 +102,7 @@ button_search = ttk.Button(root, text="Buscar", command=search_query)
 button_search.pack(pady=5)
 
 # Definir el widget tree
-columns = ("Query", "Date", "Impressions", "AvgImpressionPosition", "Clicks", "AvgClickPosition")
+columns = ("Query", "Date", "Impressions", "AvgImpressionPosition", "Clicks")
 tree = ttk.Treeview(root, columns=columns, show='headings')
 for col in columns:
     tree.heading(col, text=col, command=lambda _col=col: sort_column(tree, _col, False))
