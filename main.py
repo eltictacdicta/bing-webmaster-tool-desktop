@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from querys import QueryPanel, get_sites, get_page_stats
-from utils import get_date_limit, convertir_fecha_unix, convertir_fecha  # Importar get_date_limit desde utils.py
-from datetime import datetime, timedelta
+from utils import get_date_limit, convertir_fecha_unix # Importar get_date_limit desde utils.py
+from datetime import datetime
 from collections import defaultdict
 
 data_cache = []
