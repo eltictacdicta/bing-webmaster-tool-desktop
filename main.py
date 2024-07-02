@@ -1,34 +1,70 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from querys import QueryPanel, get_sites, get_page_stats, convertir_fecha
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 data_cache = []
+showing_queries = False  # Variable para alternar entre mostrar URLs y queries
 
 # Función que se ejecuta al presionar el botón "Obtener estadísticas"
-def on_submit():
+def on_submit(by_query=False):
+    #global data_query=False):
     global data_cache  # Permite modificar la variable global data_cache
     site_url = site_combobox.get()  # Obtiene la URL del sitio seleccionada en el combobox
     if site_url:
-        result = get_page_stats(site_url)  # Obtiene las estadísticas de la página
+        result = get_page_stats(site_url, by_query)  # Obtiene las estadísticas de la página o query
         if isinstance(result, str):
             messagebox.showerror("Error", result)  # Muestra un error si el resultado es un string (mensaje de error)
         else:
             data_cache = result  # Guarda los resultados en la caché
-            # Limpiar la tabla antes de insertar nuevos datos
-            for row in tree.get_children():
-                tree.delete(row)
-            
-            # Insertar los datos en la tabla
-            for item in result:
-                tree.insert("", "end", values=(
-                    item['Query'], 
-                    convertir_fecha(item['Date']),  
-                    item['Impressions'], 
-                    item['AvgImpressionPosition'], 
-                    item['Clicks']
-                ))
+            filter_data()  # Filtra los datos según el rango de fechas seleccionado
     else:
         messagebox.showwarning("Advertencia", "Por favor, seleccione una URL del sitio.")  # Muestra una advertencia si no se selecciona una URL
+
+# Función para convertir la fecha del formato '/Date(1705651200000-0800)/' a un objeto datetime
+def convertir_fecha_unix(fecha_unix):
+    timestamp = int(fecha_unix.split('(')[1].split('-')[0]) / 1000
+    return datetime.fromtimestamp(timestamp)
+
+# Función para filtrar y agrupar los datos según el rango de fechas seleccionado
+def filter_data():
+    range_option = date_range_combobox.get()
+    if range_option == "Última semana":
+        date_limit = datetime.now() - timedelta(weeks=1)
+    elif range_option == "Últimos 30 días":
+        date_limit = datetime.now() - timedelta(days=30)
+    elif range_option == "Últimos 3 meses":
+        date_limit = datetime.now() - timedelta(days=90)
+    elif range_option == "Últimos 6 meses":
+        date_limit = datetime.now() - timedelta(days=180)
+    else:
+        date_limit = datetime.now() - timedelta(days=90)  # Por defecto, últimos 3 meses
+
+    # Limpiar la tabla antes de insertar nuevos datos
+    for row in tree.get_children():
+        tree.delete(row)
+    
+    # Agrupar los datos por URL o por Query
+    grouped_data = defaultdict(lambda: {'Impressions': 0, 'AvgImpressionPosition': 0, 'Clicks': 0, 'Count': 0})
+    for item in data_cache:
+        item_date = convertir_fecha_unix(item['Date'])
+        if item_date >= date_limit:
+            key = item['Query'] if showing_queries else item.get('Page', item['Query'])
+            grouped_data[key]['Impressions'] += item['Impressions']
+            grouped_data[key]['AvgImpressionPosition'] += item['AvgImpressionPosition']
+            grouped_data[key]['Clicks'] += item['Clicks']
+            grouped_data[key]['Count'] += 1
+
+    # Insertar los datos agrupados en la tabla
+    for key, data in grouped_data.items():
+        avg_position = data['AvgImpressionPosition'] / data['Count'] if data['Count'] > 0 else 0
+        tree.insert("", "end", values=(
+            key, 
+            data['Impressions'], 
+            avg_position, 
+            data['Clicks']
+        ))
 
 # Función que se ejecuta al hacer doble clic en un elemento del treeview
 def on_treeview_double_click(event):
@@ -76,6 +112,14 @@ def sort_column(tree, col, reverse):
 
     tree.heading(col, command=lambda: sort_column(tree, col, not reverse))  # Cambia la dirección de ordenación al hacer clic en el encabezado de la columna
 
+# Función para alternar entre mostrar estadísticas por URLs y por queries
+def toggle_view(by_query):
+    global showing_queries
+    showing_queries = by_query
+    button_toggle_query.config(state=tk.DISABLED if showing_queries else tk.NORMAL)
+    button_toggle_url.config(state=tk.NORMAL if showing_queries else tk.DISABLED)
+    on_submit(by_query)
+
 # Crear la ventana principal
 root = tk.Tk()
 root.title("Bing Webmaster Tools")
@@ -87,10 +131,18 @@ label.pack(pady=5)
 site_combobox = ttk.Combobox(root, width=50)
 site_combobox.pack(pady=5)
 
-button = ttk.Button(root, text="Obtener estadísticas", command=on_submit)
-button.pack(pady=5)
+label_date_range = ttk.Label(root, text="Seleccione el rango de fechas:")
+label_date_range.pack(pady=5)
 
-# Esta parte del código ha sido eliminada según las instrucciones.
+date_range_combobox = ttk.Combobox(root, values=["Última semana", "Últimos 30 días", "Últimos 3 meses", "Últimos 6 meses"], width=50)
+date_range_combobox.set("Últimos 3 meses")  # Valor por defecto
+date_range_combobox.pack(pady=5)
+
+button_toggle_query = ttk.Button(root, text="Mostrar estadísticas por queries", command=lambda: toggle_view(True))
+button_toggle_query.pack(pady=5)
+
+button_toggle_url = ttk.Button(root, text="Mostrar estadísticas por URLs", command=lambda: toggle_view(False))
+button_toggle_url.pack(pady=5)
 
 label_search = ttk.Label(root, text="Buscar en Query:")
 label_search.pack(pady=5)
@@ -102,7 +154,7 @@ button_search = ttk.Button(root, text="Buscar", command=search_query)
 button_search.pack(pady=5)
 
 # Definir el widget tree
-columns = ("Query", "Date", "Impressions", "AvgImpressionPosition", "Clicks")
+columns = ("Query/URL", "Impressions", "AvgImpressionPosition", "Clicks")
 tree = ttk.Treeview(root, columns=columns, show='headings')
 for col in columns:
     tree.heading(col, text=col, command=lambda _col=col: sort_column(tree, _col, False))

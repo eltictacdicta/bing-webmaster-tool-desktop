@@ -30,13 +30,17 @@ def get_sites():
         messagebox.showerror("Error", str(e))
         return []
 
-def get_page_stats(site_url):
+def get_page_stats(site_url, by_query=False):
     headers = {
         'User-Agent': 'curl/7.12.1',
         'Content-Type': 'application/json'
     }
     try:
-        url = f'https://ssl.bing.com/webmaster/api.svc/json/GetPageStats?apikey={API_KEY}&siteUrl={site_url}'
+        if by_query:
+            url = f'https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?apikey={API_KEY}&siteUrl={site_url}'
+        else:
+            url = f'https://ssl.bing.com/webmaster/api.svc/json/GetPageStats?apikey={API_KEY}&siteUrl={site_url}'
+        
         r = requests.get(url=url, headers=headers)
         if r.status_code == 200:
             global data_cache
