@@ -9,7 +9,6 @@ showing_queries = False  # Variable para alternar entre mostrar URLs y queries
 
 # Función que se ejecuta al presionar el botón "Obtener estadísticas"
 def on_submit(by_query=False):
-    #global data_query=False):
     global data_cache  # Permite modificar la variable global data_cache
     site_url = site_combobox.get()  # Obtiene la URL del sitio seleccionada en el combobox
     if site_url:
@@ -30,6 +29,7 @@ def convertir_fecha_unix(fecha_unix):
 # Función para filtrar y agrupar los datos según el rango de fechas seleccionado
 def filter_data():
     range_option = date_range_combobox.get()
+    query = entry_search.get().lower()  # Obtiene la consulta de búsqueda y la convierte a minúsculas
     if range_option == "Última semana":
         date_limit = datetime.now() - timedelta(weeks=1)
     elif range_option == "Últimos 30 días":
@@ -49,7 +49,7 @@ def filter_data():
     grouped_data = defaultdict(lambda: {'Impressions': 0, 'AvgImpressionPosition': 0, 'Clicks': 0, 'Count': 0})
     for item in data_cache:
         item_date = convertir_fecha_unix(item['Date'])
-        if item_date >= date_limit:
+        if item_date >= date_limit and (query in item['Query'].lower() or not query):
             key = item['Query'] if showing_queries else item.get('Page', item['Query'])
             grouped_data[key]['Impressions'] += item['Impressions']
             grouped_data[key]['AvgImpressionPosition'] += item['AvgImpressionPosition']
@@ -77,21 +77,6 @@ def on_treeview_double_click(event):
     else:
         messagebox.showwarning("Advertencia", "Por favor, seleccione la URL del sitio y la URL de la página.")  # Muestra una advertencia si no se selecciona una URL del sitio o de la página
 
-# Función que se ejecuta al presionar el botón "Buscar"
-def search_query():
-    query = entry_search.get().lower()  # Obtiene la consulta de búsqueda y la convierte a minúsculas
-    for row in tree.get_children():
-        tree.delete(row)  # Limpia la tabla
-    for item in data_cache:
-        if query in item['Query'].lower():  # Filtra los resultados que contienen la consulta de búsqueda
-            tree.insert("", "end", values=(
-                item['Query'], 
-                convertir_fecha(item['Date']), 
-                item['Impressions'], 
-                item['AvgImpressionPosition'], 
-                item['Clicks']
-            ))
-
 # Función para ordenar las columnas del treeview
 def sort_column(tree, col, reverse):
     # Función para convertir los valores a un tipo adecuado para la comparación
@@ -116,8 +101,6 @@ def sort_column(tree, col, reverse):
 def toggle_view(by_query):
     global showing_queries
     showing_queries = by_query
-    button_toggle_query.config(state=tk.DISABLED if showing_queries else tk.NORMAL)
-    button_toggle_url.config(state=tk.NORMAL if showing_queries else tk.DISABLED)
     on_submit(by_query)
 
 # Crear la ventana principal
@@ -138,20 +121,17 @@ date_range_combobox = ttk.Combobox(root, values=["Última semana", "Últimos 30 
 date_range_combobox.set("Últimos 3 meses")  # Valor por defecto
 date_range_combobox.pack(pady=5)
 
-button_toggle_query = ttk.Button(root, text="Mostrar estadísticas por queries", command=lambda: toggle_view(True))
-button_toggle_query.pack(pady=5)
-
-button_toggle_url = ttk.Button(root, text="Mostrar estadísticas por URLs", command=lambda: toggle_view(False))
-button_toggle_url.pack(pady=5)
-
 label_search = ttk.Label(root, text="Buscar en Query:")
 label_search.pack(pady=5)
 
 entry_search = ttk.Entry(root, width=50)
 entry_search.pack(pady=5)
 
-button_search = ttk.Button(root, text="Buscar", command=search_query)
-button_search.pack(pady=5)
+button_toggle_query = ttk.Button(root, text="Mostrar estadísticas por queries", command=lambda: toggle_view(True))
+button_toggle_query.pack(pady=5)
+
+button_toggle_url = ttk.Button(root, text="Mostrar estadísticas por URLs", command=lambda: toggle_view(False))
+button_toggle_url.pack(pady=5)
 
 # Definir el widget tree
 columns = ("Query/URL", "Impressions", "AvgImpressionPosition", "Clicks")
