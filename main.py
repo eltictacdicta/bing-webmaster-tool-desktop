@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from querys import QueryPanel, get_sites, get_page_stats, convertir_fecha
+from querys import QueryPanel, get_sites, get_page_stats
+from utils import get_date_limit, convertir_fecha_unix, convertir_fecha  # Importar get_date_limit desde utils.py
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -28,18 +29,8 @@ def convertir_fecha_unix(fecha_unix):
 
 # Función para filtrar y agrupar los datos según el rango de fechas seleccionado
 def filter_data():
-    range_option = date_range_combobox.get()
+    date_limit = get_date_limit(date_range_combobox.get())
     query = entry_search.get().lower()  # Obtiene la consulta de búsqueda y la convierte a minúsculas
-    if range_option == "Última semana":
-        date_limit = datetime.now() - timedelta(weeks=1)
-    elif range_option == "Últimos 30 días":
-        date_limit = datetime.now() - timedelta(days=30)
-    elif range_option == "Últimos 3 meses":
-        date_limit = datetime.now() - timedelta(days=90)
-    elif range_option == "Últimos 6 meses":
-        date_limit = datetime.now() - timedelta(days=180)
-    else:
-        date_limit = datetime.now() - timedelta(days=90)  # Por defecto, últimos 3 meses
 
     # Limpiar la tabla antes de insertar nuevos datos
     for row in tree.get_children():
@@ -59,6 +50,7 @@ def filter_data():
     # Insertar los datos agrupados en la tabla
     for key, data in grouped_data.items():
         avg_position = data['AvgImpressionPosition'] / data['Count'] if data['Count'] > 0 else 0
+        avg_position = round(avg_position)  # Redondear a entero
         tree.insert("", "end", values=(
             key, 
             data['Impressions'], 
@@ -66,17 +58,16 @@ def filter_data():
             data['Clicks']
         ))
 
-# Función que se ejecuta al hacer doble clic en un elemento del treeview
 def on_treeview_double_click(event):
     item = tree.selection()[0]  # Obtiene el elemento seleccionado
     page_url = tree.item(item, "values")[0]  # Obtiene la URL de la página del elemento seleccionado
     site_url = site_combobox.get()  # Obtiene la URL del sitio seleccionada en el combobox
+    range_option = date_range_combobox.get()  # Obtiene el rango de fechas seleccionado
     if site_url and page_url:
-        query_panel = QueryPanel(root, site_url, page_url)  # Crea un panel de consulta con la URL del sitio y la URL de la página
+        query_panel = QueryPanel(root, site_url, page_url, range_option)  # Pasa el rango de fechas al QueryPanel
         query_panel.show()  # Muestra el panel de consulta
     else:
         messagebox.showwarning("Advertencia", "Por favor, seleccione la URL del sitio y la URL de la página.")  # Muestra una advertencia si no se selecciona una URL del sitio o de la página
-
 # Función para ordenar las columnas del treeview
 def sort_column(tree, col, reverse):
     # Función para convertir los valores a un tipo adecuado para la comparación
@@ -120,6 +111,7 @@ label_date_range.pack(pady=5)
 date_range_combobox = ttk.Combobox(root, values=["Última semana", "Últimos 30 días", "Últimos 3 meses", "Últimos 6 meses"], width=50)
 date_range_combobox.set("Últimos 3 meses")  # Valor por defecto
 date_range_combobox.pack(pady=5)
+date_range_combobox._name = "date_range_combobox"  # Asignar nombre explícito
 
 label_search = ttk.Label(root, text="Buscar en Query:")
 label_search.pack(pady=5)
