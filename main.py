@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from querys import QueryPanel, get_sites, get_page_stats
+from querys import QueryPanel
 from urls import UrlPanel  # Importar UrlPanel
-from utils import get_date_limit, convertir_fecha_unix
+from utils import get_date_limit, convertir_fecha_unix, get_sites, get_page_stats
 from datetime import datetime
 from collections import defaultdict
 

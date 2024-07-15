@@ -5,30 +5,10 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 from collections import defaultdict
-from utils import get_date_limit, convertir_fecha_unix
+from utils import get_date_limit, convertir_fecha_unix,get_query_urls
 
-# Cargar las variables de entorno desde el archivo .env
-load_dotenv()
 
-# Obtener la API key desde las variables de entorno
-API_KEY = os.getenv('BING_API_KEY')
 
-def get_query_urls(site_url, query):
-    headers = {
-        'User-Agent': 'curl/7.12.1',
-        'Content-Type': 'application/json'
-    }
-    try:
-        url = f'https://ssl.bing.com/webmaster/api.svc/json/GetQueryPageStats?siteUrl={site_url}&query="{query}"&apikey={API_KEY}'
-        print(f"Generated URL: {url}")  # Agregar mensaje de depuración
-        r = requests.get(url=url, headers=headers)
-        if r.status_code == 200:
-            data = r.json()
-            return data['d']
-        else:
-            return f"Error: {r.status_code}\n{r.content}"
-    except Exception as e:
-        return str(e)
 
 class UrlPanel:
     def __init__(self, root, site_url, query, range_option):

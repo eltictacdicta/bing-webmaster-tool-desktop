@@ -1,72 +1,9 @@
-import requests
-from dotenv import load_dotenv
-import os
+
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk  # Importar ttk
 from collections import defaultdict
-from utils import get_date_limit, convertir_fecha_unix  # Importar get_date_limit desde utils.py
-
-# Cargar las variables de entorno desde el archivo .env
-load_dotenv()
-
-# Obtener la API key desde las variables de entorno
-API_KEY = os.getenv('BING_API_KEY')
-
-def get_sites():
-    headers = {
-        'User-Agent': 'curl/7.12.1',
-        'Content-Type': 'application/json'
-    }
-    try:
-        url = f'https://ssl.bing.com/webmaster/api.svc/json/GetUserSites?apikey={API_KEY}'
-        r = requests.get(url=url, headers=headers)
-        if r.status_code == 200:
-            data = r.json()
-            return [site['Url'] for site in data['d']]
-        else:
-            messagebox.showerror("Error", f"Error: {r.status_code}\n{r.content}")
-            return []
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
-        return []
-
-def get_page_stats(site_url, by_query=False):
-    headers = {
-        'User-Agent': 'curl/7.12.1',
-        'Content-Type': 'application/json'
-    }
-    try:
-        if by_query:
-            url = f'https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?apikey={API_KEY}&siteUrl={site_url}'
-        else:
-            url = f'https://ssl.bing.com/webmaster/api.svc/json/GetPageStats?apikey={API_KEY}&siteUrl={site_url}'
-        
-        r = requests.get(url=url, headers=headers)
-        if r.status_code == 200:
-            global data_cache
-            data_cache = r.json()['d']
-            return data_cache
-        else:
-            return f"Error: {r.status_code}\n{r.content}"
-    except Exception as e:
-        return str(e)
-
-def get_page_query_stats(site_url, page_url):
-    headers = {
-        'User-Agent': 'curl/7.12.1',
-        'Content-Type': 'application/json'
-    }
-    try:
-        url = f'https://ssl.bing.com/webmaster/api.svc/json/GetPageQueryStats?apikey={API_KEY}&siteUrl={site_url}&page={page_url}'
-        r = requests.get(url=url, headers=headers)
-        if r.status_code == 200:
-            data = r.json()
-            return data['d']
-        else:
-            return f"Error: {r.status_code}\n{r.content}"
-    except Exception as e:
-        return str(e)
+from utils import get_date_limit, convertir_fecha_unix, get_page_query_stats
 
 
 class QueryPanel:
