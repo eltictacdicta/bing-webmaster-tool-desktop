@@ -2,8 +2,10 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk  # Importar ttk
+from tkinter import filedialog
 from collections import defaultdict
 from utils import get_date_limit, convertir_fecha_unix, get_page_query_stats
+import csv  # Importar el módulo CSV
 
 
 class QueryPanel:
@@ -70,6 +72,29 @@ class QueryPanel:
 
             button_search = ttk.Button(self.window, text="Buscar", command=search_query)
             button_search.pack(pady=5)
+
+            def export_to_csv():
+                # Abrir un cuadro de diálogo para seleccionar la ubicación y nombre del archivo
+                file_path = filedialog.asksaveasfilename(
+                    defaultextension=".csv",
+                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                    title="Guardar como"
+                )
+
+                if file_path:  # Verificar que el usuario no canceló
+                    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(columns)  # Escribir encabezados
+
+                        for key, data in grouped_data.items():
+                            avg_position = data['AvgImpressionPosition'] / data['Count'] if data['Count'] > 0 else 0
+                            avg_position = round(avg_position)  # Redondear a entero
+                            writer.writerow([key, data['Impressions'], avg_position, data['Clicks']])
+
+                    messagebox.showinfo("Exportar a CSV", f"Los resultados se han exportado correctamente a {file_path}.")
+
+            button_export = ttk.Button(self.window, text="Exportar a CSV", command=export_to_csv)
+            button_export.pack(pady=5)
 
             # Crear el treeview para mostrar los resultados
             columns = ("Query", "Impressions", "AvgImpressionPosition", "Clicks")  # Cambiar "Fecha" a "Query"
